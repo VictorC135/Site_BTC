@@ -19,7 +19,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("🛡️ Terminal d'Analyse Privé")
-st.markdown(f"### Bienvenue dans votre interface de gestion, **[NOM DU CLIENT]**")
+st.markdown(f"### Bienvenue dans votre interface de gestion, **MR Coin Victor**")
 st.write("Ce terminal analyse les données mondiales du BTC en temps réel pour optimiser votre capital.")
 
 # --- CHARGEMENT DES DONNÉES ---
