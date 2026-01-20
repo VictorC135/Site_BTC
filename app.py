@@ -49,33 +49,34 @@ future_preds = [data['Close'].iloc[-1]] * 31
 target_price = round(float(data['Close'].iloc[-1]), 2)
 
 # --- LOGIQUE DE PRÉDICTION SÉCURISÉE ---
+# 1. On nettoie les données
 df_pred = data.dropna().copy()
 
-# On initialise des valeurs par défaut pour éviter le NameError
-prediction_demain = [0]
-target_price = data['Close'].iloc[-1] 
+# 2. On prépare des valeurs par défaut au cas où l'IA ne peut pas tourner
+model = None
+future_preds = [data['Close'].iloc[-1]] * 31
+target_price = round(float(data['Close'].iloc[-1]), 2)
 
-if len(df_pred) > 20: # On vérifie qu'on a assez de données
+# 3. On ne lance l'IA que si on a assez de données (ex: 20 jours)
+if len(df_pred) > 20:
     df_pred['Timestamp'] = np.arange(len(df_pred))
     X = df_pred[['Timestamp']]
     y = df_pred['Close']
     
-    if len(df_pred) > 20:
+    # Création et entraînement (bien indentés sous le IF)
     model = LinearRegression()
     model.fit(X, y)
-    # ... tout le reste de tes calculs IA ici
     
-    # Prédiction pour demain
+    # Calcul des prédictions
     last_index = df_pred['Timestamp'].max()
-    prediction_demain = model.predict([[last_index + 1]])
+    future_days = np.array([last_index + i for i in range(1, 31)]).reshape(-1, 1)
+    future_preds = model.predict(future_days)
+    target_price = round(float(future_preds[-1]), 2)
     
-    # Cible à 30 jours
-    future_days = np.array([[last_index + 30]])
-    target_price = model.predict(future_days)[0]
-    
-    st.sidebar.metric("IA : Prédiction Demain", f"{prediction_demain[0]:.2f} $")
+    # Affichage sidebar
+    st.sidebar.metric("IA : Prédiction Demain", f"{future_preds[0]:.2f} $")
 else:
-    st.sidebar.warning("Données insuffisantes pour l'IA.")
+    st.sidebar.warning("Données insuffisantes pour l'IA (Analyse technique uniquement)")
 
 # --- NOUVEAUTÉ : RÉCUPÉRATION DU SENTIMENT (API GRATUITE) ---
 def get_fear_greed():
