@@ -43,32 +43,32 @@ loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
 rs = gain / loss
 data['RSI'] = 100 - (100 / (1 + rs))
 
-# --- LOGIQUE DE PRÉDICTION (Régression Linéaire) ---
-# On crée une copie pour ne pas abîmer les données d'affichage
-df_pred = data.dropna().copy() 
+# --- LOGIQUE DE PRÉDICTION SÉCURISÉE ---
+df_pred = data.dropna().copy()
 
-# On vérifie qu'il reste des données après avoir enlevé les lignes vides
-if not df_pred.empty and len(df_pred) > 1:
+# On initialise des valeurs par défaut pour éviter le NameError
+prediction_demain = [0]
+target_price = data['Close'].iloc[-1] 
+
+if len(df_pred) > 20: # On vérifie qu'on a assez de données
     df_pred['Timestamp'] = np.arange(len(df_pred))
     X = df_pred[['Timestamp']]
     y = df_pred['Close']
-
+    
     model = LinearRegression()
     model.fit(X, y)
     
-    # Prédiction pour demain (dernier index + 1)
+    # Prédiction pour demain
     last_index = df_pred['Timestamp'].max()
     prediction_demain = model.predict([[last_index + 1]])
     
-    # On affiche la prédiction proprement dans l'app
-    st.sidebar.metric("Prédiction demain", f"{prediction_demain[0]:.2f} $")
+    # Cible à 30 jours
+    future_days = np.array([[last_index + 30]])
+    target_price = model.predict(future_days)[0]
+    
+    st.sidebar.metric("IA : Prédiction Demain", f"{prediction_demain[0]:.2f} $")
 else:
-    st.sidebar.warning("Calcul de l'IA en attente (données insuffisantes)")
-
-# Projection pour le mois suivant (30 jours)
-future_days = np.array([len(df_pred) + i for i in range(1, 31)]).reshape(-1, 1)
-future_preds = model.predict(future_days)
-target_price = round(float(future_preds[-1]), 2)
+    st.sidebar.warning("Données insuffisantes pour l'IA.")
 
 # --- NOUVEAUTÉ : RÉCUPÉRATION DU SENTIMENT (API GRATUITE) ---
 def get_fear_greed():
