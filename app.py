@@ -44,13 +44,26 @@ rs = gain / loss
 data['RSI'] = 100 - (100 / (1 + rs))
 
 # --- LOGIQUE DE PRÉDICTION (Régression Linéaire) ---
-df_pred = data.dropna()
-df_pred['Timestamp'] = np.arange(len(df_pred))
-X = df_pred[['Timestamp']]
-y = df_pred['Close']
+# On crée une copie pour ne pas abîmer les données d'affichage
+df_pred = data.dropna().copy() 
 
-model = LinearRegression()
-model.fit(X, y)
+# On vérifie qu'il reste des données après avoir enlevé les lignes vides
+if not df_pred.empty and len(df_pred) > 1:
+    df_pred['Timestamp'] = np.arange(len(df_pred))
+    X = df_pred[['Timestamp']]
+    y = df_pred['Close']
+
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Prédiction pour demain (dernier index + 1)
+    last_index = df_pred['Timestamp'].max()
+    prediction_demain = model.predict([[last_index + 1]])
+    
+    # On affiche la prédiction proprement dans l'app
+    st.sidebar.metric("Prédiction demain", f"{prediction_demain[0]:.2f} $")
+else:
+    st.sidebar.warning("Calcul de l'IA en attente (données insuffisantes)")
 
 # Projection pour le mois suivant (30 jours)
 future_days = np.array([len(df_pred) + i for i in range(1, 31)]).reshape(-1, 1)
