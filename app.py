@@ -43,6 +43,11 @@ loss = (-delta.where(delta < 0, 0)).rolling(window=14).mean()
 rs = gain / loss
 data['RSI'] = 100 - (100 / (1 + rs))
 
+# Valeurs par défaut pour éviter les erreurs rouges
+model = None
+future_preds = [data['Close'].iloc[-1]] * 31 
+target_price = round(float(data['Close'].iloc[-1]), 2)
+
 # --- LOGIQUE DE PRÉDICTION SÉCURISÉE ---
 df_pred = data.dropna().copy()
 
@@ -55,8 +60,10 @@ if len(df_pred) > 20: # On vérifie qu'on a assez de données
     X = df_pred[['Timestamp']]
     y = df_pred['Close']
     
+    if len(df_pred) > 20:
     model = LinearRegression()
     model.fit(X, y)
+    # ... tout le reste de tes calculs IA ici
     
     # Prédiction pour demain
     last_index = df_pred['Timestamp'].max()
