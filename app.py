@@ -6,6 +6,7 @@ import plotly.graph_objects as go
 import requests # Ajoute ceci en haut de ton fichier app.py
 from sklearn.linear_model import LinearRegression
 from datetime import datetime, timedelta
+from sklearn.preprocessing import PolynomialFeatures # À mettre tout en haut avec les imports
 
 # Configuration de la page
 st.set_page_config(page_title="BTC Smart Entry Predictor", layout="wide")
@@ -48,35 +49,41 @@ model = None
 future_preds = [data['Close'].iloc[-1]] * 31 
 target_price = round(float(data['Close'].iloc[-1]), 2)
 
-# --- LOGIQUE DE PRÉDICTION SÉCURISÉE ---
-# 1. On nettoie les données
-df_pred = data.dropna().copy()
+# --- LOGIQUE IA AVANCÉE (PRÉCISION +++) ---
+# On se concentre sur les 90 derniers jours pour capter la tendance actuelle
+df_recent = data.tail(90).copy()
+df_recent = df_recent.dropna()
 
-# 2. On prépare des valeurs par défaut au cas où l'IA ne peut pas tourner
-model = None
-future_preds = [data['Close'].iloc[-1]] * 31
-target_price = round(float(data['Close'].iloc[-1]), 2)
+# Initialisation des variables de secours (pour éviter les écrans rouges)
+prediction_demain = 0
+target_price = data['Close'].iloc[-1]
+future_preds = [target_price] * 30
+future_dates = [data.index[-1] + timedelta(days=i) for i in range(1, 31)]
 
-# 3. On ne lance l'IA que si on a assez de données (ex: 20 jours)
-if len(df_pred) > 20:
-    df_pred['Timestamp'] = np.arange(len(df_pred))
-    X = df_pred[['Timestamp']]
-    y = df_pred['Close']
+if len(df_recent) > 30:
+    # Préparation des données
+    X = np.arange(len(df_recent)).reshape(-1, 1)
+    y = df_recent['Close'].values
     
-    # Création et entraînement (bien indentés sous le IF)
+    # Création de la courbe (Degré 2 pour éviter de trop "inventer")
+    poly = PolynomialFeatures(degree=2)
+    X_poly = poly.fit_transform(X)
+    
     model = LinearRegression()
-    model.fit(X, y)
+    model.fit(X_poly, y)
     
-    # Calcul des prédictions
-    last_index = df_pred['Timestamp'].max()
-    future_days = np.array([last_index + i for i in range(1, 31)]).reshape(-1, 1)
-    future_preds = model.predict(future_days)
-    target_price = round(float(future_preds[-1]), 2)
+    # 1. PRÉDICTION DE DEMAIN (Haute précision)
+    next_day_coords = poly.fit_transform([[len(df_recent)]])
+    prediction_demain = model.predict(next_day_coords)[0]
     
-    # Affichage sidebar
-    st.sidebar.metric("IA : Prédiction Demain", f"{future_preds[0]:.2f} $")
-else:
-    st.sidebar.warning("Données insuffisantes pour l'IA (Analyse technique uniquement)")
+    # 2. PROJECTION À 30 JOURS (La ligne en pointillés)
+    future_indices = np.arange(len(df_recent), len(df_recent) + 30).reshape(-1, 1)
+    future_preds = model.predict(poly.fit_transform(future_indices))
+    target_price = future_preds[-1]
+
+    # Affichage dans la sidebar
+    st.sidebar.metric("IA : Prédiction Demain", f"{prediction_demain:,.2f} $")
+    st.sidebar.metric("IA : Cible 30j", f"{target_price:,.2f} $")
 
 # --- NOUVEAUTÉ : RÉCUPÉRATION DU SENTIMENT (API GRATUITE) ---
 def get_fear_greed():
