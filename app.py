@@ -54,13 +54,13 @@ target_price = round(float(data['Close'].iloc[-1]), 2)
 df_recent = data.tail(90).copy()
 df_recent = df_recent.dropna()
 
-# Initialisation des variables de secours (pour éviter les écrans rouges)
+# Initialisation des variables de secours (évite les erreurs rouges si le chargement échoue)
 prediction_demain = 0
-target_price = data['Close'].iloc[-1]
-future_preds = [target_price] * 30
-future_dates = [data.index[-1] + timedelta(days=i) for i in range(1, 31)]
+target_price = 0
+if not data.empty:
+    target_price = data['Close'].iloc[-1]
 
-if len(df_recent) > 30:
+if not df_recent.empty and len(df_recent) > 30:
     # Préparation des données
     X = np.arange(len(df_recent)).reshape(-1, 1)
     y = df_recent['Close'].values
@@ -76,7 +76,7 @@ if len(df_recent) > 30:
     next_day_coords = poly.fit_transform([[len(df_recent)]])
     prediction_demain = model.predict(next_day_coords)[0]
     
-    # 2. PROJECTION À 30 JOURS (La ligne en pointillés)
+    # 2. PROJECTION À 30 JOURS (La ligne de tendance)
     future_indices = np.arange(len(df_recent), len(df_recent) + 30).reshape(-1, 1)
     future_preds = model.predict(poly.fit_transform(future_indices))
     target_price = future_preds[-1]
